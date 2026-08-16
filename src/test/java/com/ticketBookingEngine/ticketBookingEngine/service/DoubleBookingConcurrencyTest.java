@@ -117,23 +117,30 @@ public class DoubleBookingConcurrencyTest {
     @Test
     @DisplayName("Demonstrate Double Booking Bug under 50 Concurrent Requests")
     void demonstrateDoubleBookingBug() throws InterruptedException, ExecutionException {
+        // ---GIVEN---
         int numberOfConcurrentUsers = 50;
 
+        // Count successful bookings and exceptions using thread-safe atomic counters
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger failureCount = new AtomicInteger(0);
 
+        // Create a fixed thread pool of 50 threads
         ExecutorService executorService = Executors.newFixedThreadPool(numberOfConcurrentUsers);
+
+        // CountDownLatch forces all 50 threads to wait and launch AT THE EXACT SAME INSTANT
         CountDownLatch latch = new CountDownLatch(1);
 
         List<CompletableFuture<Void>> futures = new ArrayList<>();
 
         List<User> users = userRepository.findAll();
 
+        // --- WHEN ---
         for (int i = 0; i < numberOfConcurrentUsers; i++) {
             final Long userId = users.get(i).getId();
 
             CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                 try {
+                    // Wait at the starting line until latch releases
                     latch.await();
 
                     BookingRequestDTO request = BookingRequestDTO.builder()
@@ -142,11 +149,13 @@ public class DoubleBookingConcurrencyTest {
                             .showSeatIds(List.of(testShowSeatId))
                             .build();
 
+                    // Call the Booking Service (Unprotected)
                     BookingResponseDTO response = bookingService.createBooking(request);
                     if (response != null && response.getBookingId() != null) {
                         successCount.incrementAndGet();
                     }
                 } catch (Exception e) {
+                    // Expecting failure for losing threads once seat is taken
                     failureCount.incrementAndGet();
                 }
             }, executorService);
@@ -154,10 +163,14 @@ public class DoubleBookingConcurrencyTest {
             futures.add(future);
         }
 
+        // Release all 50 threads simultaneously
         latch.countDown();
+
+        // Wait for all 50 threads to finish execution
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         executorService.shutdown();
 
+        // --- THEN (Verification) ---
         ShowSeat updatedSeat = showSeatRepository.findById(testShowSeatId).orElseThrow();
         List<BookingItem> itemsForSeat = bookingItemRepository.findByShowSeatId(testShowSeatId);
 
