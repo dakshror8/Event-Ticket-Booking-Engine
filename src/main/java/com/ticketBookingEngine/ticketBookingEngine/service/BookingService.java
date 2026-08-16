@@ -48,7 +48,6 @@ public class BookingService {
             }
         }
 
-
         BigDecimal totalAmount = BigDecimal.ZERO;
         List<String> bookedSeatNumbers = new ArrayList<>();
         for(ShowSeat showSeat : showSeats){
