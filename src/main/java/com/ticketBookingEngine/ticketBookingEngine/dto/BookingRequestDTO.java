@@ -21,6 +21,7 @@ public class BookingRequestDTO {
     @NotNull(message = "Show ID is required")
     private Long showId;
 
+    @NotNull(message = "Seat list cannot be null")
     @NotEmpty(message = "At least one seat must be selected")
     private List<Long> showSeatIds;
 }

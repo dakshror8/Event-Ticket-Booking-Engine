@@ -15,6 +15,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -32,6 +33,42 @@ public class BookingControllerTest {
 
     @MockitoBean
     private BookingService bookingService;
+
+    @Test
+    @DisplayName("Should return 400 Bad Request when mandatory fields are missing")
+    void whenMissingMandatoryFields_thenReturn400BadRequest() throws Exception {
+        // Arrange invalid DTO (all fields null)
+        BookingRequestDTO invalidRequest = BookingRequestDTO.builder().build();
+
+        // Act & Assert
+        mockMvc.perform(post("/api/v1/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("User ID is required")))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Show ID is required")));
+    }
+
+    @Test
+    @DisplayName("Should return 400 Bad Request when showSeatIds list is empty")
+    void whenShowSeatIdsIsEmpty_thenReturn400BadRequest() throws Exception {
+        // Arrange DTO with empty seat list
+        BookingRequestDTO invalidRequest = BookingRequestDTO.builder()
+                .userId(1L)
+                .showId(1L)
+                .showSeatIds(Collections.emptyList())
+                .build();
+
+        // Act & Assert
+        mockMvc.perform(post("/api/v1/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("At least one seat must be selected")));
+    }
 
     @Test
     @DisplayName("Should return 409 Conflict when Optimistic Locking fails")
