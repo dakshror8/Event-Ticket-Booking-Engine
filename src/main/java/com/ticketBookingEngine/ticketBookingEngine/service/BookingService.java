@@ -28,7 +28,6 @@ public class BookingService {
 
     @Transactional
     public BookingResponseDTO createBooking(BookingRequestDTO request) {
-        try {
             // 1. Fetch User and Show
             User user = userRepository.findById(request.getUserId())
                     .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + request.getUserId()));
@@ -91,9 +90,5 @@ public class BookingService {
                     .seatNumbers(bookedSeatNumbers)
                     .build();
 
-        } catch (ObjectOptimisticLockingFailureException e) {
-            // Catch JPA Optimistic Lock Failure and translate to clean domain message
-            throw new IllegalStateException("Seat booking conflict: Another user completed booking first. Please choose another seat.");
-        }
     }
 }
